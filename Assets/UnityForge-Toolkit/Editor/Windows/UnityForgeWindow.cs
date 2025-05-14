@@ -9,17 +9,37 @@ using System.Reflection;
 
 namespace UnityForge
 {
+    [InitializeOnLoad]
+    public static class UnityForgeWindowCleaner
+    {
+        static UnityForgeWindowCleaner()
+        {
+            EditorApplication.delayCall += () =>
+            {
+                foreach (var window in Resources.FindObjectsOfTypeAll<UnityForgeWindow>())
+                {
+                    if (!window._initialized)
+                    {
+                        Debug.LogWarning("[UnityForge] Schließe fehlerhafte Fensterinstanz beim Start.");
+                        window.Close();
+                    }
+                }
+            };
+        }
+    }
+
     public class UnityForgeWindow : EditorWindow
     {
-        private Dictionary<string, Type> _availableToolTypes;
-        private Dictionary<string, bool> _toolToggles;
-        private List<IUnityForgeTool> _activeTools;
-        private Dictionary<string, Texture2D> _iconCache;
-        private Dictionary<string, string> _toolLabels;
+        private Dictionary<string, Type> _availableToolTypes = new();
+        private Dictionary<string, bool> _toolToggles = new();
+        private List<IUnityForgeTool> _activeTools = new();
+        private Dictionary<string, Texture2D> _iconCache = new();
+        private Dictionary<string, string> _toolLabels = new();
 
         private int _selectedTab;
         private Vector2 _logScroll;
         private string _outputLog = string.Empty;
+        internal bool _initialized = false;
 
         [MenuItem("Tools/UnityForge")]
         public static void ShowWindow() =>
@@ -27,133 +47,177 @@ namespace UnityForge
 
         private void OnEnable()
         {
+            Initialize();
+        }
+
+        private void Initialize()
+        {
+            if (_initialized) return;
+            Debug.Log("[UnityForge] Initialize UnityForgeWindow");
+            _initialized = true;
+
             var toolTypes = Assembly.GetAssembly(typeof(IUnityForgeTool))
                 .GetTypes()
                 .Where(t => typeof(IUnityForgeTool).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
-                .Select(t =>
-                {
-                    var inst = Activator.CreateInstance(t) as IUnityForgeTool;
-                    return (ToolName: inst.Name, ToolType: t);
-                })
+                .Select(t => Activator.CreateInstance(t) as IUnityForgeTool)
+                .Where(inst => inst != null)
                 .ToList();
 
-            _availableToolTypes = toolTypes.ToDictionary(x => x.ToolName, x => x.ToolType);
-
-            if (_toolToggles == null)
-                _toolToggles = new Dictionary<string, bool>();
-
-            foreach (var name in _availableToolTypes.Keys)
-                if (!_toolToggles.ContainsKey(name))
-                    _toolToggles[name] = false;
-
-            var removed = _toolToggles.Keys.Except(_availableToolTypes.Keys).ToList();
-            foreach (var name in removed)
-                _toolToggles.Remove(name);
-
-            _activeTools = new List<IUnityForgeTool>();
-
-            _iconCache = new Dictionary<string, Texture2D>
+            foreach (var inst in toolTypes)
             {
-                { "RandomPlacement", LoadIcon("icon_scatter") },
-                { "Adjust", LoadIcon("icon_scale") },
-                { "BoundingBox", LoadIcon("icon_pivot") }
-            };
+                _availableToolTypes[inst.Name] = inst.GetType();
+                _toolToggles[inst.Name] = false;
+            }
 
-            _toolLabels = new Dictionary<string, string>
-            {
-                { "RandomPlacement", "Scatter" },
-                { "Adjust", "Scale" },
-                { "BoundingBox", "Pivot" }
-            };
+            var iconMapping = new Dictionary<string, string>
+{
+    { "Scale", "icon_scale.png" },
+    { "Pivot", "icon_pivot.png" },
+    { "Scatter", "icon_scatter.png" },
+    { "Renamer", "icon_renamer.png" },
+    { "UVCheck", "icon_uvcheck.png" }
+};
+
+foreach (var kv in _availableToolTypes)
+{
+    string iconName = iconMapping.ContainsKey(kv.Key) ? iconMapping[kv.Key] : null;
+
+    if (!string.IsNullOrEmpty(iconName))
+    {
+        string path = $"Assets/UnityForge-Toolkit/Editor/Icons/{iconName}";
+        var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+        _iconCache[kv.Key] = icon;
+        if (icon == null)
+            Debug.LogWarning($"[UnityForge] Icon mapped but not found: {path}");
+    }
+    else
+    {
+        Debug.LogWarning($"[UnityForge] No icon mapping found for tool: {kv.Key}");
+    }
+
+    _toolLabels[kv.Key] = kv.Key;
+}
+
+
         }
 
-        private Texture2D LoadIcon(string name)
+        private void OnDisable()
         {
-            return AssetDatabase.LoadAssetAtPath<Texture2D>(
-                "Assets/UnityForge-Toolkit/Editor/Icons/" + name + ".png");
+            foreach (var tool in _activeTools)
+                (tool as IDisposable)?.Dispose();
+            _activeTools.Clear();
         }
 
         private void OnGUI()
         {
-            GUILayout.Label("Click a tool to open it:", EditorStyles.boldLabel);
-
-            EditorGUILayout.BeginHorizontal();
-            foreach (var kv in _availableToolTypes)
+            try
             {
-                var toolName = kv.Key;
-                Texture2D icon = _iconCache.ContainsKey(toolName) ? _iconCache[toolName] : null;
-                string label = _toolLabels.ContainsKey(toolName) ? _toolLabels[toolName] : toolName;
-
-                GUIStyle style = new GUIStyle(GUI.skin.button)
+                if (!_initialized)
                 {
-                    fixedWidth = 64,
-                    fixedHeight = 64,
-                    imagePosition = ImagePosition.ImageAbove,
-                    alignment = TextAnchor.MiddleCenter,
-                    fontSize = 10
-                };
-
-                if (GUILayout.Button(new GUIContent(label, icon), style))
-                {
-                    foreach (var key in _toolToggles.Keys.ToList())
-                        _toolToggles[key] = false;
-                    _toolToggles[toolName] = true;
-                    ApplyToolSelection();
+                    EditorGUILayout.HelpBox("Initializing... Please wait and reopen.", MessageType.Info);
+                    return;
                 }
-            }
-            EditorGUILayout.EndHorizontal();
 
-            GUILayout.Space(10);
+                int buttonsPerRow = 5;
+                int count = 0;
 
-            if (_activeTools.Count > 0)
-            {
-                var names = _activeTools.Select(t => _toolLabels.ContainsKey(t.Name) ? _toolLabels[t.Name] : t.Name).ToArray();
-                _selectedTab = GUILayout.Toolbar(_selectedTab, names);
-                GUILayout.Space(8);
+                EditorGUILayout.BeginVertical();
+                EditorGUILayout.BeginHorizontal();
 
-                try
+                foreach (var name in _availableToolTypes.Keys)
                 {
-                    _activeTools[_selectedTab].OnGUI();
+                    var icon = _iconCache[name];
+                    var label = _toolLabels[name];
+
+                    GUIContent content = new GUIContent(label, icon);
+
+                    GUIStyle style = new GUIStyle(GUI.skin.button)
+                    {
+                        imagePosition = ImagePosition.ImageAbove,
+                        alignment = TextAnchor.MiddleCenter,
+                        fontSize = 10,
+                        wordWrap = true
+                    };
+
+                    if (GUILayout.Button(content, style, GUILayout.Width(64), GUILayout.Height(72)))
+                    {
+                        OpenTool(name);
+                    }
+
+                    count++;
+                    if (count % buttonsPerRow == 0)
+                    {
+                        EditorGUILayout.EndHorizontal();
+                        EditorGUILayout.BeginHorizontal();
+                    }
                 }
-                catch (Exception ex)
-                {
-                    AppendLog($"Error in tool '{_activeTools[_selectedTab].Name}': {ex.Message}");
-                }
+
+                EditorGUILayout.EndHorizontal(); // schließt die letzte Zeile
+EditorGUILayout.EndVertical();
+
 
                 GUILayout.Space(10);
-                GUILayout.Label("Output Log", EditorStyles.boldLabel);
-                _logScroll = EditorGUILayout.BeginScrollView(_logScroll, GUILayout.Height(100));
-                EditorGUILayout.TextArea(_outputLog, GUILayout.ExpandHeight(true));
-                EditorGUILayout.EndScrollView();
+                DrawActiveTool();
+                GUILayout.Space(10);
+                DrawLog();
             }
-        }
-
-        private void ApplyToolSelection()
-        {
-            _activeTools.Clear();
-            _outputLog = string.Empty;
-
-            foreach (var kv in _toolToggles)
+            catch (Exception ex)
             {
-                if (!kv.Value) continue;
-                var type = _availableToolTypes[kv.Key];
-                var tool = Activator.CreateInstance(type) as IUnityForgeTool;
-                if (tool != null)
-                    _activeTools.Add(tool);
+                Debug.LogWarning($"[UnityForgeWindow] Caught in OnGUI: {ex.Message}");
             }
-
-            _selectedTab = 0;
         }
 
-        protected void AppendLog(string message)
+        private void OpenTool(string toolName)
+        {
+            foreach (var key in _toolToggles.Keys.ToList())
+                _toolToggles[key] = false;
+
+            _toolToggles[toolName] = true;
+            _activeTools.Clear();
+            var type = _availableToolTypes[toolName];
+            var inst = Activator.CreateInstance(type) as IUnityForgeTool;
+            if (inst != null)
+                _activeTools.Add(inst);
+            _selectedTab = 0;
+            _outputLog = string.Empty;
+            Debug.Log($"[UnityForge] OpenTool: {toolName}");
+        }
+
+        private void DrawActiveTool()
+        {
+            if (_activeTools.Count == 0)
+                return;
+
+            var names = _activeTools.Select(t => t.Name).ToArray();
+            _selectedTab = GUILayout.Toolbar(_selectedTab, names);
+            GUILayout.Space(5);
+            try
+            {
+                _activeTools[_selectedTab].OnGUI();
+            }
+            catch (Exception ex)
+            {
+                Log($"Error in OnGUI of {_activeTools[_selectedTab].Name}: {ex.Message}");
+            }
+        }
+
+        private void DrawLog()
+        {
+            GUILayout.Label("Output Log:", EditorStyles.boldLabel);
+            _logScroll = EditorGUILayout.BeginScrollView(_logScroll, GUILayout.Height(100));
+            EditorGUILayout.TextArea(_outputLog);
+            EditorGUILayout.EndScrollView();
+        }
+
+        public void Log(string message)
         {
             _outputLog += $"[{DateTime.Now:HH:mm:ss}] {message}\n";
-            _logScroll.y = float.MaxValue;
         }
+
         public static void AppendLogStatic(string message)
         {
-            var window = GetWindow<UnityForgeWindow>();
-            window.AppendLog(message);
+            var wnd = GetWindow<UnityForgeWindow>();
+            wnd.Log(message);
         }
     }
 }

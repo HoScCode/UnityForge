@@ -1,4 +1,4 @@
-// Assets/Editor/UnityForge/Tools/RandomPlacementTool.cs
+// Assets/Editor/UnityForge/Tools/ScatterTool.cs
 using UnityEditor;
 using UnityEngine;
 using System.Linq;
@@ -9,9 +9,9 @@ namespace UnityForge.Tools
     /// Random Placement Tool: Scatter a reference object over a specified surface with live preview.
     /// Supports multiple noise patterns (Perlin, Uniform Random, Grid Jitter) and positional offset.
     /// </summary>
-    public class RandomPlacementTool : IUnityForgeTool
+    public class ScatterTool : IUnityForgeTool
     {
-        public string Name => "RandomPlacement";
+        public string Name => "Scatter";
 
         private enum NoisePattern { Perlin, UniformRandom, GridJitter }
         private NoisePattern _noisePattern = NoisePattern.Perlin;

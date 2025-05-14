@@ -1,15 +1,15 @@
-// Assets/Editor/UnityForge/Tools/AdjustTool.cs
+// Assets/Editor/UnityForge/Tools/ScaleTool.cs
 using UnityEditor;
 using UnityEngine;
 
 namespace UnityForge.Tools
 {
     /// <summary>
-    /// Adjust Selected Objects: Scale manually or via reference, and reposition to reference's position.
+    /// Scale Selected Objects: Scale manually or via reference, and reposition to reference's position.
     /// </summary>
-    public class AdjustTool : IUnityForgeTool
+    public class ScaleTool : IUnityForgeTool
     {
-        public string Name => "Adjust";
+        public string Name => "Scale";
 
         private Vector3 _targetScale = Vector3.one;
         private GameObject _referenceObject = null;
@@ -18,10 +18,10 @@ namespace UnityForge.Tools
         {
             // Global description
             EditorGUILayout.HelpBox(
-                "Adjust Tool: Scale manually or via reference object, and optionally reposition to the reference's position.",
+                "Scale Tool: Scale manually or via reference object, and optionally reposition to the reference's position.",
                 MessageType.Info);
 
-            GUILayout.Label(new GUIContent("Adjust Selected Objects", "Scale or reposition selected objects."), EditorStyles.boldLabel);
+            GUILayout.Label(new GUIContent("Scale Selected Objects", "Scale or reposition selected objects."), EditorStyles.boldLabel);
 
             // Reference Object Drag & Drop
             EditorGUI.BeginChangeCheck();
@@ -97,7 +97,7 @@ namespace UnityForge.Tools
 
             foreach (var go in sel)
             {
-                Undo.RecordObject(go.transform, "Adjust Scale");
+                Undo.RecordObject(go.transform, "Scale Scale");
                 go.transform.localScale = desired;
             }
             return sel.Length;
@@ -112,7 +112,7 @@ namespace UnityForge.Tools
             Vector3 pos = _referenceObject.transform.position;
             foreach (var go in sel)
             {
-                Undo.RecordObject(go.transform, "Adjust Position");
+                Undo.RecordObject(go.transform, "Scale Position");
                 go.transform.position = pos;
             }
             return sel.Length;

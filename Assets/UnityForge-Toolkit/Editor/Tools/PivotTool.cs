@@ -1,4 +1,4 @@
-// Assets/Editor/UnityForge/Tools/BoundingBoxTool.cs
+// Assets/Editor/UnityForge/Tools/PivotTool.cs
 using UnityEditor;
 using UnityEngine;
 using System.Collections.Generic;
@@ -10,9 +10,9 @@ namespace UnityForge.Tools
     /// The tool is used to create a pivot in the middle of the selected object.
     /// You can set a pivot and press Apply. To revert, select the original object and press Revert.
     /// </summary>
-    public class BoundingBoxTool : IUnityForgeTool
+    public class PivotTool : IUnityForgeTool
     {
-        public string Name => "BoundingBox";
+        public string Name => "Pivot";
 
         private float _markerSize = 0.1f;
         private bool _showPivotMarker = false;
@@ -25,7 +25,7 @@ namespace UnityForge.Tools
 
         public void OnGUI()
         {
-            GUILayout.Label("Bounding Box & Pivot Tool", EditorStyles.boldLabel);
+            GUILayout.Label("Pivot Tool", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
                 "The tool is used to create a pivot in the middle of the selected object. You can set a pivot and press Apply. To revert, select the original object and press Revert.",
                 MessageType.Info);
