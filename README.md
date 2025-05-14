@@ -39,12 +39,12 @@ Object Stats Module – Object count and grouping by type.
 UV Checker Tool – Tool for inspecting UV layouts for selected meshes.
 
 ##  Structure
-Assets/
-└── UnityForge-Toolkit/
-├── Editor/
-│ ├── Tools/
-│ ├── Windows/
-│ └── Icons/
+<pre> Assets/ 
+  └── UnityForge-Toolkit/ 
+  ├── Editor/ 
+  │ ├── Tools/ 
+  │ ├── Windows/ 
+  │ └── Icons/ </pre>
 
 ##  Requirements
 Unity 6000.0.47f1 (tested)
