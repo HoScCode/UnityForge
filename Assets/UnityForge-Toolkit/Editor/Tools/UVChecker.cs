@@ -11,7 +11,7 @@ namespace UnityForge.Tools
     {
         public string Name => "UVCheck";
 
-        private bool _showPreview = false;
+        //private bool _showPreview = false;
         private Material _uvCheckerMaterial;
         private Texture2D[] _availableTextures;
         private int _selectedTextureIndex = 0;

@@ -76,7 +76,8 @@ namespace UnityForge
     { "Scatter", "icon_scatter.png" },
     { "Renamer", "icon_renamer.png" },
     { "UVCheck", "icon_uvcheck.png" },
-    { "Duplicate", "icon_duplicate.png" }
+    { "Duplicate", "icon_duplicate.png" },
+    { "Stats", "icon_stats.png" }
 };
 
 foreach (var kv in _availableToolTypes)
