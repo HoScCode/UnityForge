@@ -31,6 +31,13 @@ namespace UnityForge.Tools
             modules.Add(new MemoryStatsModule());
 
             moduleNames = modules.ConvertAll(m => m.Name).ToArray();
+
+            // Update modules once so initial stats are populated when
+            // the window first opens
+            foreach (var module in modules)
+            {
+                module.Update();
+            }
         }
 
         public void OnGUI()
