@@ -182,10 +182,7 @@ EditorGUILayout.EndVertical();
             _activeTools.Clear();
             var type = _availableToolTypes[toolName];
             var inst = Activator.CreateInstance(type) as IUnityForgeTool;
-            if (inst is Tools.StatsTool statsTool)
-            {
-                statsTool.InitializeModules();
-            }
+            
             if (inst != null)
                 _activeTools.Add(inst);
             _selectedTab = 0;
