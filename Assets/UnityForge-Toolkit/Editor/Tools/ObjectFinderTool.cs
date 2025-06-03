@@ -129,7 +129,8 @@ namespace UnityForge.Tools
                 return;
             }
 
-            var all = Object.FindObjectsOfType<GameObject>(true);
+            Object.FindObjectsByType<Collider>(FindObjectsSortMode.None);
+
 
             var refMesh = _reference.GetComponent<MeshFilter>()?.sharedMesh;
             var refMat = _reference.GetComponent<Renderer>()?.sharedMaterial;
