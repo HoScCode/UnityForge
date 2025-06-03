@@ -21,6 +21,7 @@ namespace UnityForge.Tools
 
         public void OnGUI()
         {
+            DrawResetItemTool();
             _showQuickTools = EditorGUILayout.Foldout(_showQuickTools, "Quick Tools", true);
             if (_showQuickTools)
                 DrawGroupTools();
@@ -37,6 +38,63 @@ namespace UnityForge.Tools
             if (_showStaticChecker)
                 DrawStaticChecker();
         }
+
+        private bool _resetTransform = true;
+        private bool _removeScripts = true;
+        private bool _removeRenderers = false;
+        private bool _removeColliders = false;
+
+        private void DrawResetItemTool()
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Reset Item", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox("Reset selected GameObject to default state. You can choose which components to reset or remove.", MessageType.Info);
+
+            _resetTransform = EditorGUILayout.Toggle("Reset Transform", _resetTransform);
+            _removeScripts = EditorGUILayout.Toggle("Remove Scripts", _removeScripts);
+            _removeRenderers = EditorGUILayout.Toggle("Remove Renderers", _removeRenderers);
+            _removeColliders = EditorGUILayout.Toggle("Remove Colliders", _removeColliders);
+
+            if (GUILayout.Button("Apply Reset to Selected") && Selection.activeGameObject != null)
+            {
+                ApplyReset(Selection.activeGameObject);
+            }
+        }
+
+        private void ApplyReset(GameObject go)
+        {
+            if (_resetTransform)
+            {
+                Undo.RecordObject(go.transform, "Reset Transform");
+                go.transform.localPosition = Vector3.zero;
+                go.transform.localRotation = Quaternion.identity;
+                go.transform.localScale = Vector3.one;
+            }
+
+            if (_removeScripts)
+            {
+                foreach (var comp in go.GetComponents<MonoBehaviour>())
+                {
+                    if (comp != null)
+                        Undo.DestroyObjectImmediate(comp);
+                }
+            }
+
+            if (_removeRenderers)
+            {
+                foreach (var renderer in go.GetComponents<Renderer>())
+                    Undo.DestroyObjectImmediate(renderer);
+            }
+
+            if (_removeColliders)
+            {
+                foreach (var collider in go.GetComponents<Collider>())
+                    Undo.DestroyObjectImmediate(collider);
+            }
+
+            UnityForgeWindow.AppendLogStatic($"Reset applied to: {go.name}");
+        }
+
 
         private void DrawGroupTools()
         {
@@ -149,7 +207,7 @@ namespace UnityForge.Tools
 
         private void ScanForSkewedColliders()
         {
-            var allColliders = GameObject.FindObjectsOfType<Collider>(true);
+            var allColliders = Object.FindObjectsByType<Collider>(FindObjectsSortMode.None);
             var skewed = new List<GameObject>();
 
             foreach (var col in allColliders)
@@ -219,7 +277,7 @@ namespace UnityForge.Tools
 
         private void CleanupEmptyGameObjects()
         {
-            var all = GameObject.FindObjectsOfType<GameObject>(true);
+            var all = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
             int removed = 0;
 
             foreach (var go in all)
@@ -274,7 +332,7 @@ namespace UnityForge.Tools
 
         private void RunStaticCheck()
         {
-            var all = GameObject.FindObjectsOfType<Renderer>(true);
+            var all = Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None);
             var list = new List<GameObject>();
 
             foreach (var r in all)
