@@ -11,6 +11,7 @@ namespace UnityForge.Tools
         private readonly List<StatsModuleBase> modules = new();
         private int selectedModule = 0;
         private string[] moduleNames;
+        private bool modulesInitialized = false;
 
         [MenuItem("Window/UnityForge/Stats", false, 100)]
         public static void ShowWindow()
@@ -21,6 +22,14 @@ namespace UnityForge.Tools
 
         private void OnEnable()
         {
+            InitializeModules();
+        }
+
+        public void InitializeModules()
+        {
+            if (modulesInitialized)
+                return;
+
             modules.Clear();
 
             modules.Add(new GeometryStatsModule());
@@ -38,10 +47,15 @@ namespace UnityForge.Tools
             {
                 module.Update();
             }
+
+            modulesInitialized = true;
         }
 
         public void OnGUI()
         {
+            if (!modulesInitialized)
+                InitializeModules();
+
             GUILayout.Space(5);
             GUILayout.Label("Select Module", EditorStyles.boldLabel);
             GUILayout.Space(5);
