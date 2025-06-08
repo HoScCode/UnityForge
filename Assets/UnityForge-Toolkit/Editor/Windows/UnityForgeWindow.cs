@@ -35,6 +35,11 @@ namespace UnityForge
         private List<IUnityForgeTool> _activeTools = new();
         private Dictionary<string, Texture2D> _iconCache = new();
         private Dictionary<string, string> _toolLabels = new();
+        private List<string> _toolOrder = new()
+        {
+            "Scale", "Pivot", "Scatter", "UVCheck", "Renamer",
+            "Duplicate", "Finder", "Align", "Stats", "Quick", "Lazy"
+        };
 
         private int _selectedTab;
         private Vector2 _logScroll;
@@ -70,41 +75,39 @@ namespace UnityForge
             }
 
             var iconMapping = new Dictionary<string, string>
-{
-    { "Scale", "icon_scale.png" },
-    { "Pivot", "icon_pivot.png" },
-    { "Scatter", "icon_scatter.png" },
-    { "Renamer", "icon_renamer.png" },
-    { "UVCheck", "icon_uvcheck.png" },
-    { "Duplicate", "icon_duplicate.png" },
-    { "Stats", "icon_stats.png" },
-    { "Finder", "icon_finder.png" },
-    { "Align", "icon_align.png" },
-    { "Quick", "icon_quick.png" }
+            {
+                { "Scale", "icon_scale.png" },
+                { "Pivot", "icon_pivot.png" },
+                { "Scatter", "icon_scatter.png" },
+                { "Renamer", "icon_renamer.png" },
+                { "UVCheck", "icon_uvcheck.png" },
+                { "Duplicate", "icon_duplicate.png" },
+                { "Stats", "icon_stats.png" },
+                { "Finder", "icon_finder.png" },
+                { "Align", "icon_align.png" },
+                { "Quick", "icon_quick.png" },
+                { "Lazy", "icon_lazy.png" }
+            };
 
-};
+            foreach (var kv in _availableToolTypes)
+            {
+                string iconName = iconMapping.ContainsKey(kv.Key) ? iconMapping[kv.Key] : null;
 
-foreach (var kv in _availableToolTypes)
-{
-    string iconName = iconMapping.ContainsKey(kv.Key) ? iconMapping[kv.Key] : null;
+                if (!string.IsNullOrEmpty(iconName))
+                {
+                    string path = $"Assets/UnityForge-Toolkit/Editor/Icons/{iconName}";
+                    var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+                    _iconCache[kv.Key] = icon;
+                    if (icon == null)
+                        Debug.LogWarning($"[UnityForge] Icon mapped but not found: {path}");
+                }
+                else
+                {
+                    Debug.LogWarning($"[UnityForge] No icon mapping found for tool: {kv.Key}");
+                }
 
-    if (!string.IsNullOrEmpty(iconName))
-    {
-        string path = $"Assets/UnityForge-Toolkit/Editor/Icons/{iconName}";
-        var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-        _iconCache[kv.Key] = icon;
-        if (icon == null)
-            Debug.LogWarning($"[UnityForge] Icon mapped but not found: {path}");
-    }
-    else
-    {
-        Debug.LogWarning($"[UnityForge] No icon mapping found for tool: {kv.Key}");
-    }
-
-    _toolLabels[kv.Key] = kv.Key;
-}
-
-
+                _toolLabels[kv.Key] = kv.Key;
+            }
         }
 
         private void OnDisable()
@@ -130,10 +133,12 @@ foreach (var kv in _availableToolTypes)
                 EditorGUILayout.BeginVertical();
                 EditorGUILayout.BeginHorizontal();
 
-                foreach (var name in _availableToolTypes.Keys)
+                foreach (var name in _toolOrder)
                 {
-                    var icon = _iconCache[name];
-                    var label = _toolLabels[name];
+                    if (!_availableToolTypes.ContainsKey(name)) continue;
+
+                    var icon = _iconCache.ContainsKey(name) ? _iconCache[name] : null;
+                    var label = _toolLabels.ContainsKey(name) ? _toolLabels[name] : name;
 
                     GUIContent content = new GUIContent(label, icon);
 
@@ -158,9 +163,8 @@ foreach (var kv in _availableToolTypes)
                     }
                 }
 
-                EditorGUILayout.EndHorizontal(); // schließt die letzte Zeile
-EditorGUILayout.EndVertical();
-
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.EndVertical();
 
                 GUILayout.Space(10);
                 DrawActiveTool();
@@ -182,7 +186,7 @@ EditorGUILayout.EndVertical();
             _activeTools.Clear();
             var type = _availableToolTypes[toolName];
             var inst = Activator.CreateInstance(type) as IUnityForgeTool;
-            
+
             if (inst != null)
                 _activeTools.Add(inst);
             _selectedTab = 0;
@@ -225,6 +229,13 @@ EditorGUILayout.EndVertical();
         {
             var wnd = GetWindow<UnityForgeWindow>();
             wnd.Log(message);
+        }
+
+        private void DrawVerticalLine(float height = 72f)
+        {
+            Rect lastRect = GUILayoutUtility.GetLastRect();
+            Rect lineRect = new Rect(lastRect.xMax + 4, lastRect.yMin + 4, 1, height - 8);
+            EditorGUI.DrawRect(lineRect, new Color(1f, 1f, 1f, 0.2f));
         }
     }
 }
